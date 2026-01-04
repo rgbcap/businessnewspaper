@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>신문 선택</title>
+    <style>
+        body {
+            font-family: 'Malgun Gothic', sans-serif;
+            background-color: #f8f9fa;
+            margin: 0;
+            padding: 40px 20px;
+            text-align: center;
+        }
+        h1 {
+            margin-bottom: 50px;
+            color: #333;
+        }
+        .newspaper-grid {
+            display: flex;
+            justify-content: center;
+            gap: 60px;
+            flex-wrap: wrap;  /* 모바일에서 세로로 쌓이게 */
+        }
+        .newspaper-item {
+            text-decoration: none;
+            color: inherit;
+            transition: transform 0.2s;
+        }
+        .newspaper-item:hover {
+            transform: scale(1.05);
+        }
+        .newspaper-item img {
+            width: 300px;               /* 원하는 크기로 조정 가능 */
+            max-width: 90vw;            /* 모바일에서 너무 커지지 않게 */
+            height: auto;
+            border-radius: 12px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.15);
+        }
+        .newspaper-item p {
+            margin-top: 15px;
+            font-size: 1.4em;
+            font-weight: bold;
+            color: #333;
+        }
+        @media (max-width: 768px) {
+            .newspaper-grid {
+                flex-direction: column;
+                align-items: center;
+                gap: 40px;
+            }
+            .newspaper-item img {
+                width: 280px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <h1>미모부자 모바일 신문</h1>
+
+    <div class="newspaper-grid">
+        <!-- 한겨레 클릭 → HK.html -->
+        <a href="HK.html" class="newspaper-item">
+            <img src="HK.png" alt="한국경제 신문">
+            <p>한국경제</p>
+        </a>
+
+        <!-- 매일경제 클릭 → MK.html -->
+        <a href="MK.html" class="newspaper-item">
+            <img src="MK.png" alt="매일경제 신문">
+            <p>매일경제</p>
+        </a>
+    </div>
+</body>
+</html>
