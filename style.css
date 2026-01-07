@@ -1,0 +1,92 @@
+body {
+    padding: 20px;
+    background: #f8f9fa;
+}
+
+#viewer {
+    max-width: 1200px;
+    margin: 30px auto;
+    text-align: center;
+}
+
+.newspaper-img {
+    max-width: 100%;
+    height: auto;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+    touch-action: pan-x pan-y pinch-zoom;
+    display: block;
+    margin: 0 auto;  /* 이미지 중앙 정렬 */
+}
+
+.image-click-area {
+    position: relative;
+    display: inline-block;
+    max-width: 100%;
+}
+
+/* 페이지 넘김 클릭 영역 (좌우 20%) */
+.click-left,
+.click-right {
+    position: absolute;
+    top: 0;
+    height: 100%;
+    cursor: pointer;
+    /* 디버깅 시 보이게 하려면 background 추가 (배포 시 제거) */
+    /* background: rgba(255, 0, 0, 0.1); */
+}
+
+.click-left {
+    left: 0;
+    width: 20%;
+}
+
+.click-right {
+    right: 0;
+    width: 20%;
+}
+
+/* 컨트롤 패널 숨김/표시 애니메이션 */
+.controls {
+    margin-bottom: 20px;
+    transition: opacity 0.4s ease, height 0.4s ease, padding 0.4s ease, margin 0.4s ease;
+    opacity: 1;
+    overflow: hidden;
+}
+
+.controls.hidden {
+    opacity: 0;
+    height: 0;
+    padding: 0;
+    margin-bottom: 0;
+}
+
+/* 메모 영역 */
+#memo-section {
+    margin-top: 40px;
+    padding: 20px;
+    background: white;
+    border-radius: 10px;
+    box-shadow: 0 4px 12px rgba(0,0,0,0.1);
+}
+
+.memo-item {
+    border-bottom: 1px solid #eee;
+    padding: 10px 0;
+    text-align: left;
+}
+
+/* 모바일 최적화 */
+@media (max-width: 768px) {
+    body {
+        padding: 10px;
+    }
+    
+    .controls .card {
+        padding: 15px !important;
+    }
+    
+    .click-left,
+    .click-right {
+        width: 25%;  /* 모바일에서 조금 더 넓게 */
+    }
+}
