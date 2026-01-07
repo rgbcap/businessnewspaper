@@ -5,427 +5,126 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>매일경제 신문 지면보기</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-        body { padding: 20px; background: #f8f9fa; }
-        #viewer { max-width: 1200px; margin: 30px auto; text-align: center; }
-        .newspaper-img { 
-            max-width: 100%; 
-            height: auto; 
-            box-shadow: 0 4px 12px rgba(0,0,0,0.15);
-            touch-action: pan-x pan-y pinch-zoom;  /* pinch-zoom과 스크롤 자유롭게 허용 */
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            pointer-events: auto;
-        }
-        .controls {
-            display: none;
-            transition: opacity 0.3s ease;
-            opacity: 0;
-        }
+    
+    <!-- Firebase SDK (순서 중요: app → firestore → auth) -->
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.7.1/firebase-auth-compat.js"></script>
 
-        .controls.visible {
-            display: block;
-            opacity: 1;
-        }
-
-        #viewer > .text-center.mb-4 {
-            display: none;
-        }
-
-        #error-msg { color: red; font-weight: bold; margin: 20px 0; display: none; }
-        #page-info { font-size: 1.2em; margin-bottom: 20px; }
-        @media (max-width: 768px) {
-            .col-6 { flex: 0 0 100%; max-width: 100%; }
-            .text-end, .text-start { text-align: center !important; }
-        }
-
-        /* 페이지 넘김 영역: 왼쪽 20%, 오른쪽 20%만 */
-        .click-left, .click-right {
-            position: absolute;
-            top: 0;
-            height: 100%;
-            cursor: pointer;
-            -webkit-touch-callout: none;
-            -webkit-user-select: none;
-            touch-action: manipulation;
-        }
-
-        .click-left {
-            left: 0;
-            width: 20%;   /* ← 여기서 20% */
-        }
-
-        .click-right {
-            right: 0;
-            width: 20%;   /* ← 여기서 20% */
-        }
-    </style>
+    <!-- PhotoSwipe CSS -->
+    <link rel="stylesheet" href="https://unpkg.com/photoswipe@5.4.3/dist/photoswipe.css">
+    
+    <!-- 사용자 정의 CSS -->
+    <link rel="stylesheet" href="style.css">
 </head>
 <body>
-    <div class="container">       
-        <div class="controls card p-4">
-            <div class="row g-3 align-items-end">
-                <div class="col-md-4">
-                    <label class="form-label">날짜</label>
-                    <input type="date" class="form-control" id="date-picker">
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">신문 타입</label>
-                    <select class="form-select" id="type-select">
-                        <option value="01">섹션A (종합)</option>
-                        <option value="02">섹션B</option>
-                        <option value="03">섹션C</option>
-                        <!-- 필요시 더 추가 -->
-                    </select>
-                </div>
-                <div class="col-md-3">
-                    <label class="form-label">페이지</label>
-                    <input type="number" class="form-control" id="page-input" min="1" value="1">
-                </div>
-                <div class="col-md-2">
-                    <button class="btn btn-primary w-100" id="go-btn">이동</button>
-                </div>
+    <div class="container">
+        <!-- 로그인/회원가입 영역 + 로그아웃 버튼 -->
+        <div id="auth-section" class="card p-4 mb-4">
+            <div class="d-flex justify-content-between align-items-center mb-3">
+                <h4 id="auth-title" class="mb-0">로그인</h4>
+                <button id="logout-btn" class="btn btn-sm btn-outline-danger" style="display:none;">로그아웃</button>
             </div>
-            
-            <div class="mt-3 text-center">
-                <button class="btn btn-outline-secondary me-2" id="prev-btn">◀ 이전</button>
-                <button class="btn btn-outline-secondary" id="next-btn">다음 ▶</button>
-            </div>
+            <input type="email" id="email" class="form-control mb-2" placeholder="이메일">
+            <input type="password" id="password" class="form-control mb-2" placeholder="비밀번호 (6자 이상)">
+            <button id="auth-btn" class="btn btn-primary me-2">로그인</button>
+            <button id="toggle-auth" class="btn btn-outline-secondary">회원가입으로 전환</button>
+            <p id="auth-message" class="text-danger mt-2"></p>
+            <p id="current-user" class="mt-3" style="display:none;">
+                로그인됨: <span id="user-email"></span>
+            </p>
         </div>
-        
-        <div id="viewer">
-            <p id="page-info" class="text-muted"></p>
-            
-            <!-- 보기 모드 토글 -->
-            <div class="text-center mb-4">
-                <button class="btn btn-outline-primary me-2" id="single-mode-btn">단일 페이지 보기</button>
-                <button class="btn btn-primary" id="double-mode-btn">두 쪽 보기</button>
+
+        <!-- 메인 콘텐츠 (로그인 후 표시) -->
+        <div id="main-content" style="display:none;">
+            <!-- 컨트롤 패널 -->
+            <div class="controls card p-4">
+                <div class="row g-3 align-items-end">
+                    <div class="col-md-4">
+                        <label class="form-label">날짜</label>
+                        <input type="date" class="form-control" id="date-picker">
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">신문 타입</label>
+                        <select class="form-select" id="type-select">
+                            <option value="01">섹션A (종합)</option>
+                            <option value="02">섹션B</option>
+                            <option value="03">섹션C</option>
+                        </select>
+                    </div>
+                    <div class="col-md-3">
+                        <label class="form-label">페이지</label>
+                        <input type="number" class="form-control" id="page-input" min="1" value="1">
+                    </div>
+                    <div class="col-md-2">
+                        <button class="btn btn-primary w-100" id="go-btn">이동</button>
+                    </div>
+                </div>
+                <div class="mt-3 text-center">
+                    <button class="btn btn-outline-secondary me-2" id="prev-btn">◀ 이전</button>
+                    <button class="btn btn-outline-secondary" id="next-btn">다음 ▶</button>
+                </div>
             </div>
             
-            <!-- 단일 보기 -->
-            <div id="single-view">
-                <div class="image-click-area" style="position: relative; display: inline-block; max-width: 100%;">
-                    <img id="newspaper-img" src="" alt="신문 페이지 로딩 중..." loading="lazy" class="newspaper-img img-fluid" style="display: block; max-width: 100%;">
-                    
-                    <!-- 왼쪽 클릭 영역 (투명) -->
+            <!-- 신문 뷰어 -->
+            <div id="viewer">
+                <p id="page-info" class="text-muted"></p>
+                
+                <!-- 한쪽 보기 (항상 고정) -->
+                <div class="image-click-area pswp-gallery" id="single-gallery">
+                    <a href="" id="single-link" data-pswp-width="1200" data-pswp-height="1800">
+                        <img id="newspaper-img" src="" alt="신문 페이지" loading="lazy" class="newspaper-img img-fluid">
+                    </a>
                     <div class="click-left"></div>
-                    
-                    <!-- 오른쪽 클릭 영역 (투명) -->
                     <div class="click-right"></div>
                 </div>
+                
+                <p id="error-msg">해당 페이지 이미지가 존재하지 않습니다.</p>
             </div>
-            
-            <!-- 두 쪽 보기 -->
-            <div id="double-view" style="display: none;">
-                <div class="row justify-content-center">
-                    <div class="col-6 text-end">
-                        <p class="text-muted mb-2">오른쪽 (홀수면)</p>
-                        <div class="image-click-area" style="position: relative; display: inline-block; max-width: 100%;">
-                            <img id="right-img" src="" alt="오른쪽 페이지" loading="lazy" class="newspaper-img img-fluid" style="display: block; max-width: 100%;">
-                            <div class="click-left" style="position: absolute; top: 0; left: 0; width: 50%; height: 100%; cursor: pointer;"></div>
-                            <div class="click-right" style="position: absolute; top: 0; right: 0; width: 50%; height: 100%; cursor: pointer;"></div>
-                        </div>
-                    </div>
-                    <div class="col-6 text-start">
-                        <p class="text-muted mb-2">왼쪽 (짝수면)</p>
-                        <div class="image-click-area" style="position: relative; display: inline-block; max-width: 100%;">
-                            <img id="left-img" src="" alt="왼쪽 페이지" loading="lazy" class="newspaper-img img-fluid" style="display: block; max-width: 100%;">
-                            <div class="click-left" style="position: absolute; top: 0; left: 0; width: 50%; height: 100%; cursor: pointer;"></div>
-                            <div class="click-right" style="position: absolute; top: 0; right: 0; width: 50%; height: 100%; cursor: pointer;"></div>
-                        </div>
-                    </div>
-                </div>
+
+            <!-- 메모 영역 -->
+            <div id="memo-section">
+                <h4>메모 <small>(현재 페이지: <span id="current-page-info"></span>)</small></h4>
+                <textarea id="memo-input" class="form-control mb-3" rows="3" placeholder="신문을 읽고 느낀 점을 적어주세요..."></textarea>
+                <button id="save-memo" class="btn btn-success">메모 저장</button>
+                <div id="memo-list" class="mt-4"></div>
             </div>
-            
-            <p id="error-msg">해당 페이지 이미지가 존재하지 않습니다.</p>
         </div>
     </div>
 
-    <script>
-        const BASE_URL = "https://file2.mk.co.kr/mkde/";
-        const datePicker = document.getElementById('date-picker');
-        const typeSelect = document.getElementById('type-select');
-        const pageInput = document.getElementById('page-input');
-        const img = document.getElementById('newspaper-img');
-        const leftImg = document.getElementById('left-img');
-        const rightImg = document.getElementById('right-img');
-        const errorMsg = document.getElementById('error-msg');
-        const pageInfo = document.getElementById('page-info');
-        const goBtn = document.getElementById('go-btn');
-        const prevBtn = document.getElementById('prev-btn');
-        const nextBtn = document.getElementById('next-btn');
-        const singleView = document.getElementById('single-view');
-        const doubleView = document.getElementById('double-view');
-        const singleModeBtn = document.getElementById('single-mode-btn');
-        const doubleModeBtn = document.getElementById('double-mode-btn');
+    <!-- PhotoSwipe 루트 요소 -->
+    <div class="pswp" tabindex="-1" role="dialog" aria-hidden="true">
+        <div class="pswp__bg"></div>
+        <div class="pswp__scroll-wrap">
+            <div class="pswp__container">
+                <div class="pswp__item"></div>
+                <div class="pswp__item"></div>
+                <div class="pswp__item"></div>
+            </div>
+            <div class="pswp__ui pswp__ui--hidden">
+                <div class="pswp__top-bar">
+                    <div class="pswp__counter"></div>
+                    <button class="pswp__button pswp__button--close" title="Close (Esc)"></button>
+                    <button class="pswp__button pswp__button--fs" title="Toggle fullscreen"></button>
+                    <button class="pswp__button pswp__button--zoom" title="Zoom"></button>
+                    <div class="pswp__preloader">
+                        <div class="pswp__preloader__icn">
+                            <div class="pswp__preloader__cut">
+                                <div class="pswp__preloader__donut"></div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <button class="pswp__button pswp__button--arrow--left" title="Previous"></button>
+                <button class="pswp__button pswp__button--arrow--right" title="Next"></button>
+                <div class="pswp__caption">
+                    <div class="pswp__caption__center"></div>
+                </div>
+            </div>
+        </div>
+    </div>
 
-        let viewMode = 'single';  // 'single' or 'double'
-
-        function generateUrl(pageNum) {
-            const dateVal = datePicker.value;
-            if (!dateVal) return null;
-            const [year, month, day] = dateVal.split('-');
-            const type = typeSelect.value;
-            const page = String(pageNum).padStart(2, '0');
-            return `${BASE_URL}${year}/${month}/${day}/page/${type}_${page}_ORG.jpg`;
-        }
-
-        function updateImage() {
-            const dateVal = datePicker.value;
-            if (!dateVal) return;
-
-            let basePage = parseInt(pageInput.value);
-
-            // 두 쪽 보기일 때 홀수 페이지로 강제 조정
-            if (viewMode === 'double' && basePage % 2 === 0) {
-                basePage -= 1;
-                pageInput.value = basePage;
-            }
-
-            if (viewMode === 'single') {
-                singleView.style.display = 'block';
-                doubleView.style.display = 'none';
-                const url = generateUrl(basePage);
-                img.src = url;
-                pageInfo.textContent = `${dateVal.replace(/-/g, '.')} | ${typeSelect.options[typeSelect.selectedIndex].text} ${basePage}면`;
-            } else {
-                singleView.style.display = 'none';
-                doubleView.style.display = 'block';
-                const rightUrl = generateUrl(basePage);        // 홀수면 (오른쪽)
-                const leftUrl = generateUrl(basePage + 1);     // 짝수면 (왼쪽)
-                rightImg.src = rightUrl;
-                leftImg.src = leftUrl;
-                pageInfo.textContent = `${dateVal.replace(/-/g, '.')} | ${typeSelect.options[typeSelect.selectedIndex].text} ${basePage}–${basePage+1}면 (두 쪽 보기)`;
-            }
-
-            errorMsg.style.display = 'none';
-        }
-
-        // ===== 이벤트 리스너 =====
-
-        // 날짜 변경 → 1면
-        datePicker.addEventListener('change', () => {
-            pageInput.value = 1;
-            updateImage();
-        });
-
-        // 타입 변경 → 1면
-        typeSelect.addEventListener('change', () => {
-            pageInput.value = 1;
-            updateImage();
-        });
-
-        // 페이지 입력 및 이동 버튼
-        goBtn.addEventListener('click', updateImage);
-        pageInput.addEventListener('input', () => {
-            if (pageInput.value < 1) pageInput.value = 1;
-            updateImage();
-        });
-        pageInput.addEventListener('keydown', e => {
-            if (e.key === 'Enter') updateImage();
-        });
-
-        // 이전·다음 버튼 (모드에 따라 1면 또는 2면 단위)
-        prevBtn.addEventListener('click', () => {
-            let step = viewMode === 'double' ? 2 : 1;
-            if (parseInt(pageInput.value) > 1) {
-                pageInput.value = parseInt(pageInput.value) - step;
-                updateImage();
-            }
-        });
-
-        nextBtn.addEventListener('click', () => {
-            let step = viewMode === 'double' ? 2 : 1;
-            pageInput.value = parseInt(pageInput.value) + step;
-            updateImage();
-        });
-
-        // 보기 모드 전환
-        singleModeBtn.addEventListener('click', () => {
-            viewMode = 'single';
-            singleModeBtn.classList.add('btn-primary');
-            singleModeBtn.classList.remove('btn-outline-primary');
-            doubleModeBtn.classList.remove('btn-primary');
-            doubleModeBtn.classList.add('btn-outline-primary');
-            updateImage();
-        });
-
-        doubleModeBtn.addEventListener('click', () => {
-            viewMode = 'double';
-            doubleModeBtn.classList.add('btn-primary');
-            doubleModeBtn.classList.remove('btn-outline-primary');
-            singleModeBtn.classList.remove('btn-primary');
-            singleModeBtn.classList.add('btn-outline-primary');
-
-            // 홀수 페이지로 맞춤
-            let pageNum = parseInt(pageInput.value);
-            if (pageNum % 2 === 0) pageInput.value = pageNum - 1;
-            updateImage();
-        });
-
-        // ===== 이미지 에러 처리 =====
-        img.onerror = () => handleImageError();
-        rightImg.onerror = () => handleImageError();
-        leftImg.onerror = () => { leftImg.src = ''; };  // 왼쪽만 없을 때는 그냥 비움
-
-        function handleImageError() {
-            const currentPage = parseInt(pageInput.value);
-
-            // 1면이고 타입 01인 경우 → 날짜 문제로 판단 (휴일 등)
-            if (currentPage === 1 && typeSelect.value === '01') {
-                // 날짜를 하루 전으로 이동
-                const currentDate = new Date(datePicker.value);
-                currentDate.setDate(currentDate.getDate() - 1);  // 하루 전
-                
-                const yyyy = currentDate.getFullYear();
-                const mm = String(currentDate.getMonth() + 1).padStart(2, '0');
-                const dd = String(currentDate.getDate()).padStart(2, '0');
-                const newDateStr = `${yyyy}-${mm}-${dd}`;
-                
-                // 최대 7일 전까지만 (오늘부터 -7)
-                const today = new Date();
-                const maxBackDate = new Date(today);
-                maxBackDate.setDate(today.getDate() - 7);
-                if (currentDate < maxBackDate) {
-                    alert("최근 7일 내에 A타입 신문이 존재하지 않습니다.");
-                    errorMsg.style.display = 'block';
-                    img.src = '';
-                    leftImg.src = '';
-                    rightImg.src = '';
-                    return;
-                }
-
-                // 날짜 업데이트하고 다시 시도
-                datePicker.value = newDateStr;
-                alert("오늘 신문이 없습니다. 전날 신문으로 이동합니다: " + newDateStr.replace(/-/g, '.'));
-                updateImage();
-                return;
-            }
-
-            // 그 외: 기존 타입/페이지 에러 로직
-            if (currentPage === 1 && typeSelect.value !== '01') {
-                alert("해당 타입의 신문이 존재하지 않습니다.\n기본 타입(A타입)으로 전환합니다.");
-                typeSelect.value = '01';
-                pageInput.value = 1;
-                updateImage();
-                return;
-            }
-
-            alert("해당 페이지가 존재하지 않습니다.");
-            if (currentPage > 1) {
-                let step = viewMode === 'double' ? 2 : 1;
-                pageInput.value = currentPage - step;
-                updateImage();
-            } else {
-                errorMsg.style.display = 'block';
-                img.src = '';
-                leftImg.src = '';
-                rightImg.src = '';
-            }
-        }
-
-        // 이미지 로드 성공 시 에러 숨김
-        img.onload = () => { errorMsg.style.display = 'none'; };
-        leftImg.onload = rightImg.onload = () => { errorMsg.style.display = 'none'; };
-
-        // ===== 핵심: 페이지 넘김 영역 클릭/터치 이벤트 (20% 영역만) =====
-        document.querySelectorAll('.click-left, .click-right').forEach(area => {
-            area.addEventListener('touchstart', e => {
-                // pinch-zoom 중에는 무시 (두 손가락 이상)
-                if (e.touches.length >= 2) return;
-                e.preventDefault();
-                if (area.classList.contains('click-left')) {
-                    prevBtn.click();
-                } else {
-                    nextBtn.click();
-                }
-            }, { passive: false });
-
-            area.addEventListener('click', e => {
-                e.preventDefault();
-                if (area.classList.contains('click-left')) {
-                    prevBtn.click();
-                } else {
-                    nextBtn.click();
-                }
-            });
-        });
-
-        // 길게 누르기 (PC: 마우스 왼쪽 길게, 모바일: 길게 터치)로 컨트롤 패널 토글
-        let longPressTimer = null;
-        const LONG_PRESS_DURATION = 600;  // 600ms 이상 누르면 인식
-
-        function toggleControls() {
-            const controls = document.querySelector('.controls');
-            if (controls.classList.contains('visible')) {
-                controls.classList.remove('visible');
-            } else {
-                controls.classList.add('visible');
-            }
-            // 모바일 진동 피드백
-            if (navigator.vibrate) {
-                navigator.vibrate(50);
-            }
-        }
-
-        function startLongPress() {
-            cancelLongPress();  // 이전 타이머 취소
-            longPressTimer = setTimeout(() => {
-                toggleControls();
-                longPressTimer = null;  // 실행 후 초기화
-            }, LONG_PRESS_DURATION);
-        }
-
-        function cancelLongPress() {
-            if (longPressTimer) {
-                clearTimeout(longPressTimer);
-                longPressTimer = null;
-            }
-        }
-
-        // 마우스 이벤트 (PC)
-        document.body.addEventListener('mousedown', (e) => {
-            if (e.button === 0) {  // 왼쪽 버튼만
-                if (e.target.classList.contains('click-left') || e.target.classList.contains('click-right')) {
-                    return;  // 이미지 클릭 영역 무시
-                }
-                startLongPress();
-            }
-        });
-
-        document.body.addEventListener('mouseup', cancelLongPress);
-        document.body.addEventListener('mouseleave', cancelLongPress);
-        document.body.addEventListener('mousemove', cancelLongPress);  // 이동 시 취소 (PC에서 드래그 방지)
-
-        // 터치 이벤트 (모바일 - iOS/Android 대응)
-        document.body.addEventListener('touchstart', (e) => {
-            if (e.target.classList.contains('click-left') || e.target.classList.contains('click-right')) {
-                return;  // 이미지 클릭 영역 무시
-            }
-            startLongPress();
-        }, { passive: false });  // iOS에서 터치 방지
-
-        document.body.addEventListener('touchend', cancelLongPress);
-        document.body.addEventListener('touchcancel', cancelLongPress);
-        document.body.addEventListener('touchmove', cancelLongPress, { passive: false });
-
-        // 초기 로드: 오늘 날짜로 설정하고 A타입 1면 표시
-        const today = new Date();
-
-        // date input에 오늘 날짜 자동 입력 (YYYY-MM-DD 형식)
-        const yyyy = today.getFullYear();
-        const mm = String(today.getMonth() + 1).padStart(2, '0');  // 1월 → 01
-        const dd = String(today.getDate()).padStart(2, '0');
-        datePicker.value = `${yyyy}-${mm}-${dd}`;
-
-        // 타입을 무조건 A타입(01)으로 초기화
-        typeSelect.value = '01';
-
-        // 페이지 1면으로 초기화
-        pageInput.value = 1;
-
-        // 이미지 업데이트
-        updateImage();
-    </script>
+    <!-- 외부 스크립트 연결 -->
+    <script src="script.js" defer></script>
 </body>
 </html>
