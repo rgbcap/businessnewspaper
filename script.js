@@ -96,14 +96,15 @@ document.addEventListener('DOMContentLoaded', () => {
         }
     });
 
-    // ===== 메모 기능 (여러 개 저장 지원) =====
+    // ===== 메모 기능 (편집 기능 추가) =====
     function getCurrentPageKey() {
         const date = datePicker.value.replace(/-/g, '');
         const page = pageInput.value;
-        return `${date}_${page}`;  // viewMode 제거 (한쪽 보기 고정이니까)
+        return `${date}_${page}`;
     }
-
-    // 메모 저장 (배열로 추가)
+    
+    let editingIndex = -1;  // 현재 편집 중인 메모 인덱스 (-1 = 편집 중 아님)
+    
     document.getElementById('save-memo').addEventListener('click', () => {
         const user = auth.currentUser;
         if (!user) {
@@ -115,28 +116,35 @@ document.addEventListener('DOMContentLoaded', () => {
             alert('메모 내용을 입력하세요.');
             return;
         }
-
+    
         const key = getCurrentPageKey();
         const timestamp = new Date().toLocaleString('ko-KR');
         const newMemo = { text, timestamp };
-
-        // 기존 메모 가져와서 새 메모 추가
+    
         db.collection('users').doc(user.uid).collection('memos').doc(key).get()
             .then(doc => {
                 let memos = [];
-                if (doc.exists) {
-                    memos = doc.data().memos || [];
+                if (doc.exists && doc.data().memos) {
+                    memos = doc.data().memos;
                 }
-                memos.push(newMemo);
-
-                // 업데이트
+    
+                if (editingIndex >= 0) {
+                    // 편집 모드: 기존 메모 수정
+                    memos[editingIndex] = newMemo;
+                    editingIndex = -1;
+                    document.getElementById('save-memo').textContent = '메모 저장';
+                } else {
+                    // 새 메모 추가
+                    memos.push(newMemo);
+                }
+    
                 return db.collection('users').doc(user.uid).collection('memos').doc(key).set({
                     memos: memos
                 });
             })
             .then(() => {
                 document.getElementById('memo-input').value = '';
-                alert('메모가 추가되었습니다!');
+                alert(editingIndex >= 0 ? '메모가 수정되었습니다!' : '메모가 추가되었습니다!');
                 loadMemos(user.uid);
             })
             .catch(err => {
@@ -144,24 +152,52 @@ document.addEventListener('DOMContentLoaded', () => {
                 alert('저장 실패: ' + err.message);
             });
     });
-
-    // 메모 로드 (여러 개 표시)
+    
+    // 메모 로드 + 편집 버튼 추가
     function loadMemos(uid) {
         const key = getCurrentPageKey();
         document.getElementById('current-page-info').textContent = pageInfo.textContent;
-
+    
         db.collection('users').doc(uid).collection('memos').doc(key).get()
             .then(doc => {
                 const list = document.getElementById('memo-list');
                 list.innerHTML = '';
                 if (doc.exists && doc.data().memos && doc.data().memos.length > 0) {
-                    const memos = doc.data().memos;
-                    // 시간 역순 정렬 (최신 메모 위로)
-                    memos.reverse().forEach(memo => {
+                    let memos = doc.data().memos;
+                    // 최신 메모 위로 정렬
+                    memos = memos.slice().reverse();
+    
+                    memos.forEach((memo, reversedIndex) => {
+                        const originalIndex = memos.length - 1 - reversedIndex;  // 원본 배열 인덱스
                         const div = document.createElement('div');
                         div.className = 'memo-item';
-                        div.innerHTML = `<strong>${memo.timestamp}</strong><p>${memo.text}</p><hr>`;
+                        div.innerHTML = `
+                            <strong>${memo.timestamp}</strong>
+                            <p>${memo.text.replace(/\n/g, '<br>')}</p>
+                            <button class="btn btn-sm btn-outline-primary edit-btn" data-index="${originalIndex}">편집</button>
+                            <hr>
+                        `;
                         list.appendChild(div);
+                    });
+    
+                    // 편집 버튼 이벤트 위임
+                    list.querySelectorAll('.edit-btn').forEach(btn => {
+                        btn.addEventListener('click', (e) => {
+                            const index = parseInt(e.target.dataset.index);
+                            editingIndex = index;
+    
+                            // 원본 메모 배열 가져와서 입력창에 로드
+                            db.collection('users').doc(uid).collection('memos').doc(key).get()
+                                .then(doc => {
+                                    if (doc.exists) {
+                                        const originalMemos = doc.data().memos;
+                                        const memoToEdit = originalMemos[index];
+                                        document.getElementById('memo-input').value = memoToEdit.text;
+                                        document.getElementById('save-memo').textContent = '수정 저장';
+                                        document.getElementById('memo-input').focus();
+                                    }
+                                });
+                        });
                     });
                 } else {
                     list.innerHTML = '<p class="text-muted">아직 메모가 없습니다.</p>';
@@ -399,4 +435,5 @@ document.addEventListener('DOMContentLoaded', () => {
     typeSelect.value = '01';
     pageInput.value = 1;
     updateImage();
+
 });
