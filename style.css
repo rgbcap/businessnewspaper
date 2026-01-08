@@ -16,6 +16,7 @@ body {
     touch-action: pan-x pan-y pinch-zoom;
     display: block;
     margin: 0 auto;  /* 이미지 중앙 정렬 */
+    transition: transform 0.3s ease;
 }
 
 .image-click-area {
@@ -89,4 +90,5 @@ body {
     .click-right {
         width: 25%;  /* 모바일에서 조금 더 넓게 */
     }
+
 }
