@@ -419,6 +419,45 @@ document.addEventListener('DOMContentLoaded', () => {
     document.body.addEventListener('touchcancel', cancelLongPress);
     document.body.addEventListener('touchmove', cancelLongPress, { passive: false });
 
+    // ===== 모바일 전체 화면 스와이프 페이지 넘김 (PC 클릭 유지) =====
+    let touchStartX = 0;
+    let touchEndX = 0;
+    const swipeThreshold = 50;  // 스와이프 인식 최소 거리 (px)
+    
+    const viewer = document.getElementById('viewer');  // 뷰어 전체 영역
+    
+    viewer.addEventListener('touchstart', e => {
+        if (e.touches.length > 1) return;  // 핀치 줌 무시
+        touchStartX = e.touches[0].clientX;
+    }, { passive: true });
+    
+    viewer.addEventListener('touchmove', e => {
+        // 터치 이동 중 (옵션: 약간의 드래그 허용)
+    }, { passive: true });
+    
+    viewer.addEventListener('touchend', e => {
+        if (e.changedTouches.length === 0) return;
+        touchEndX = e.changedTouches[0].clientX;
+    
+        const deltaX = touchStartX - touchEndX;  // 양수: 왼쪽 스와이프, 음수: 오른쪽 스와이프
+    
+        // 확대 상태(PhotoSwipe 갤러리 안)에서는 스와이프 무시 → PhotoSwipe에 넘김
+        const scale = window.visualViewport ? window.visualViewport.scale : 1;
+        if (scale > 1.1) return;
+    
+        if (Math.abs(deltaX) > swipeThreshold) {
+            if (deltaX > 0) {
+                // 왼쪽 스와이프 → 다음 페이지
+                nextBtn.click();
+            } else {
+                // 오른쪽 스와이프 → 이전 페이지
+                prevBtn.click();
+            }
+        }
+    }, { passive: true });
+
+    // 기존 좌우 클릭 영역은 PC/모바일 짧은 탭용으로 그대로 유지 (충돌 없음)
+    
     // 초기 로드: 오늘 날짜 강제 설정 (한국 시간 기준)
     const today = new Date();
 
@@ -437,3 +476,4 @@ document.addEventListener('DOMContentLoaded', () => {
     updateImage();
 
 });
+
