@@ -266,39 +266,42 @@ document.addEventListener('DOMContentLoaded', () => {
     }
 
     // ===== 신문 보기 로직 (항상 한쪽 보기) =====
-    function generateUrl(dateStr, ftype, face) {
-            if (!dateStr) return null;
-            const date = dateStr.replace(/-/g, '');
-            return `https://plusimg.hankyung.com/apps/image.load?date=${date}&ftype=${ftype}&sz=myun2400&face=${face}&bridge=N`;
-        }
-
-        function getCurrentFace() {
-            let input = faceInput.value.toUpperCase().trim();
-            if (!input) input = 'A001';
-            const section = input[0] || 'A';
-            const numPart = input.slice(1).replace(/\D/g, '') || '1';
-            const pageNum = parseInt(numPart);
-            return section + String(pageNum).padStart(3, '0');
-        }
+    function generateUrl(pageNum) {
+        const dateVal = datePicker.value;
+        if (!dateVal) return null;
+        
+        const date = dateVal.replace(/-/g, '');  // YYYYMMDD
+        const ftype = typeSelect.value;          // 01, 02 등
+        const face = getCurrentFace();           // A001 등 (기존 함수 그대로 사용)
+    
+        return `https://plusimg.hankyung.com/apps/image.load?date=${date}&ftype=${ftype}&sz=myun2400&face=${face}&bridge=N`;
+    }
+    
+    function getCurrentFace() {
+        let input = 'A001';  // 기본값, 필요하면 faceInput 같은 요소 추가
+        const section = input[0] || 'A';
+        const numPart = input.slice(1).replace(/\D/g, '') || '1';
+        const pageNum = parseInt(numPart);
+        return section + String(pageNum).padStart(3, '0');
+    }
 
     function updateImage() {
         const dateVal = datePicker.value;
         if (!dateVal) return;
-
+    
         const pageNum = parseInt(pageInput.value);
-        img.src = generateUrl(pageNum);
+        img.src = generateUrl(pageNum);  // 이제 파라미터 1개로 정상 동작
         pageInfo.textContent = `${dateVal.replace(/-/g, '.')} | ${typeSelect.options[typeSelect.selectedIndex].text} ${pageNum}면`;
-
+    
         document.getElementById('single-link').href = img.src;
-
+    
         errorMsg.style.display = 'none';
         if (auth.currentUser) loadMemos(auth.currentUser.uid);
-
-        // PhotoSwipe href 업데이트
-        document.getElementById('single-link').href = img.src;
-
-        // PhotoSwipe 초기화 (로드 보장)
-        loadPhotoSwipe();  // 이 함수가 로드 여부 판단하고 초기화
+    
+        setTimeout(() => {
+            initPhotoSwipe();
+            loadPhotoSwipe();
+        }, 300);
     }
 
     // ===== 이벤트 리스너 =====
