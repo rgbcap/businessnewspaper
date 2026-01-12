@@ -32,8 +32,6 @@ document.addEventListener('DOMContentLoaded', () => {
     const prevBtn = document.getElementById('prev-btn');
     const nextBtn = document.getElementById('next-btn');
 
-    const BASE_URL = "https://file2.mk.co.kr/mkde/";
-
     // ===== 인증 로직 =====
     let isSignup = false;
 
@@ -265,14 +263,29 @@ document.addEventListener('DOMContentLoaded', () => {
         document.head.appendChild(script);  // head에 추가 (더 안정적)
     }
 
-    // ===== 신문 보기 로직 (항상 한쪽 보기) =====
+    // ===== 신문 이미지 URL 생성 (한경 서버 형식) =====
     function generateUrl(pageNum) {
         const dateVal = datePicker.value;
         if (!dateVal) return null;
-        
-        const date = dateVal.replace(/-/g, '');  // YYYYMMDD
-        const ftype = typeSelect.value;          // 01, 02 등
-        const face = getCurrentFace();           // A001 등 (기존 함수 그대로 사용)
+    
+        const date = dateVal.replace(/-/g, ''); // YYYYMMDD
+    
+        const ftype = typeSelect.value || 'A';  // 기본 A
+        let faceInputVal = document.getElementById('face-input')?.value.trim().toUpperCase() || 'A001';
+    
+        // face 형식 보정: A001 → A001, 1 → A001, B12 → B012 등
+        let section = faceInputVal.charAt(0) || 'A';
+        let numPart = faceInputVal.slice(1).replace(/\D/g, '') || '1';
+        let faceNum = parseInt(numPart);
+        if (faceNum < 1) faceNum = 1;
+        const face = section + String(faceNum).padStart(3, '0');  // A001, B012 등
+    
+        // 페이지 번호와 face 동기화 (필요시)
+        if (pageNum > 1) {
+            // 페이지 번호를 face에 반영 (예: 3면 → A003)
+            faceNum = pageNum;
+            face = section + String(faceNum).padStart(3, '0');
+        }
     
         return `https://plusimg.hankyung.com/apps/image.load?date=${date}&ftype=${ftype}&sz=myun2400&face=${face}&bridge=N`;
     }
@@ -285,15 +298,20 @@ document.addEventListener('DOMContentLoaded', () => {
         return section + String(pageNum).padStart(3, '0');
     }
 
+    // ===== updateImage 수정 =====
     function updateImage() {
         const dateVal = datePicker.value;
         if (!dateVal) return;
     
-        const pageNum = parseInt(pageInput.value);
-        img.src = generateUrl(pageNum);  // 이제 파라미터 1개로 정상 동작
+        const pageNum = parseInt(pageInput.value) || 1;
+        const url = generateUrl(pageNum);
+    
+        console.log('생성된 URL:', url);  // 디버깅용 - 콘솔 확인
+    
+        img.src = url;
         pageInfo.textContent = `${dateVal.replace(/-/g, '.')} | ${typeSelect.options[typeSelect.selectedIndex].text} ${pageNum}면`;
     
-        document.getElementById('single-link').href = img.src;
+        document.getElementById('single-link').href = url;
     
         errorMsg.style.display = 'none';
         if (auth.currentUser) loadMemos(auth.currentUser.uid);
@@ -303,7 +321,6 @@ document.addEventListener('DOMContentLoaded', () => {
             loadPhotoSwipe();
         }, 300);
     }
-
     // ===== 이벤트 리스너 =====
     datePicker.addEventListener('change', () => { pageInput.value = 1; updateImage(); });
     typeSelect.addEventListener('change', () => { pageInput.value = 1; updateImage(); });
