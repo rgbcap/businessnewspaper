@@ -83,7 +83,7 @@ function generateImageUrl(source, date, type, pagenum) {
     if (source === 'HK') {
         formattedDate = `${year}${month}${day}`;
         const paddedPage = pagenum.toString().padStart(3, '0');
-        url = `https://plusimg.hankyung.com/apps/image.load?date=${formattedDate}&ftype=${type}&sz=myun2400&face=${type}${paddedPage}`;
+        url = `https://plusimg.hankyung.com/apps/image.load?date=${formattedDate}&ftype=A&sz=myun2400&face=${type}${paddedPage}`;
     } else if (source === 'MK') {
         formattedDate = `${year}/${month}/${day}`;
         const typeMap = { 'A': '01', 'B': '02', 'C': '03', 'D': '04', 'E': '05' };
@@ -116,4 +116,5 @@ function loadImages(source, date, type, maxPages) {
         };
         container.appendChild(img);
     }
+
 }
