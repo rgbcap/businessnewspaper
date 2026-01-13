@@ -1,0 +1,212 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>매일경제 신문 보기</title>
+    <link rel="stylesheet" href="style.css"> <!-- 필요하면 유지, 없으면 삭제 -->
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f9f9f9;
+            color: #222;
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(to right, #F79D1B, #F79D1B);
+            color: white;
+            margin: -20px -20px 30px -20px;
+        }
+        h1 { margin: 0; font-size: 2rem; }
+        #currentDate { font-size: 1.1rem; margin-top: 8px; }
+        #controls {
+            text-align: center;
+            margin: 20px 0 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+        label { font-weight: bold; }
+        input[type="date"], select {
+            padding: 8px 12px;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: 1px solid #aaa;
+        }
+        #imageViewer {
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .nav-btn:hover { opacity: 1; background: rgba(0, 0, 0, 0.7); }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; background: rgba(100,100,100,0.4); }
+        .left  { left: 10px; }
+        .right { right: 10px; }
+        #imageWrapper {
+            text-align: center;
+        }
+        #mainImage {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+        #loading, #error {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 1.3rem;
+            color: #555;
+        }
+        #error { color: #c62828; }
+        #pageInfo {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .nav-btn { width: 50px; height: 50px; font-size: 1.6rem; }
+            .left { left: 5px; }
+            .right { right: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>매일경제 신문</h1>
+        <div id="currentDate"></div>
+    </header>
+
+    <div id="controls">
+        <label for="dateInput">날짜 선택:</label>
+        <input type="date" id="dateInput">
+
+        <label for="typeSelect">판형:</label>
+        <select id="typeSelect">
+            <option value="A">A</option>
+            <option value="B">B</option>
+            <option value="C">C</option>
+        </select>
+    </div>
+
+    <div id="imageViewer">
+        <button id="prevBtn" class="nav-btn left" onclick="changePage(-1)" disabled>◀</button>
+        
+        <div id="imageWrapper">
+            <div id="loading">이미지 로딩 중...</div>
+            <img id="mainImage" style="display:none;" alt="신문 페이지">
+            <div id="error" style="display:none;"></div>
+        </div>
+        
+        <button id="nextBtn" class="nav-btn right" onclick="changePage(1)">▶</button>
+    </div>
+
+    <div id="pageInfo">페이지 1</div>
+
+    <script src="script3.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentDate = '';
+        let currentType = 'A';
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('dateInput');
+            currentDate = getTodayDate();
+            dateInput.value = currentDate;
+            updateDateDisplay(currentDate);
+
+            loadCurrentPage();
+
+            dateInput.addEventListener('change', () => {
+                currentDate = dateInput.value;
+                if (currentDate) {
+                    updateDateDisplay(currentDate);
+                    currentPage = 1;
+                    loadCurrentPage();
+                }
+            });
+
+            document.getElementById('typeSelect').addEventListener('change', (e) => {
+                currentType = e.target.value;
+                currentPage = 1;
+                loadCurrentPage();
+            });
+        });
+
+        function updateDateDisplay(dateStr) {
+            const display = document.getElementById('currentDate');
+            if (!display || !dateStr) return;
+            const date = new Date(dateStr);
+            display.textContent = date.toLocaleDateString('ko-KR', {
+                year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+            });
+        }
+
+        function loadCurrentPage() {
+            if (!currentDate) return;
+
+            const img = document.getElementById('mainImage');
+            const loading = document.getElementById('loading');
+            const errorDiv = document.getElementById('error');
+
+            img.style.display = 'none';
+            errorDiv.style.display = 'none';
+            loading.style.display = 'block';
+
+            try {
+                const url = generateImageUrl('MK', currentDate, currentType, currentPage);
+                img.src = url;
+                img.onload = () => {
+                    loading.style.display = 'none';
+                    img.style.display = 'block';
+                    updatePageInfo();
+                };
+                img.onerror = () => {
+                    loading.style.display = 'none';
+                    errorDiv.textContent = `페이지 ${currentPage}을(를) 불러올 수 없습니다.\n(해당 날짜에 신문이 없거나 서버에서 제공하지 않습니다)`;
+                    errorDiv.style.display = 'block';
+                    updatePageInfo();
+                };
+            } catch (err) {
+                loading.style.display = 'none';
+                errorDiv.textContent = '오류: ' + err.message;
+                errorDiv.style.display = 'block';
+            }
+        }
+
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage < 1) return;
+            currentPage = newPage;
+            loadCurrentPage();
+        }
+
+        function updatePageInfo() {
+            document.getElementById('pageInfo').textContent = `페이지 ${currentPage}`;
+            document.getElementById('prevBtn').disabled = (currentPage <= 1);
+        }
+    </script>
+</body>
+</html>
