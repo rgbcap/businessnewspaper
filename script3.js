@@ -90,7 +90,7 @@ function generateImageUrl(source, date, type, pagenum) {
         const typeCode = typeMap[type];
         if (!typeCode) throw new Error('MK에서 지원하지 않는 type입니다.');
         const paddedPage = pagenum.toString().padStart(2, '0');
-        url = `https://file2.mk.co.kr/mkde/${formattedDate}/page/${typeCode}_${paddedPage}_ORG.jpg`;
+        url = `https://file2.mk.co.kr/mkde/${formattedDate}/page/${typeCode}_${paddedPage}_BIG.jpg`;
     }
 
     return url;
@@ -118,3 +118,4 @@ function loadImages(source, date, type, maxPages) {
     }
 
 }
+
