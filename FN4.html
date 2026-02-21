@@ -1,0 +1,164 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파이낸셜뉴스 신문</title>
+    <link rel="stylesheet" href="style.css"> <!-- 필요하면 유지, 없으면 삭제 -->
+    <style>
+        body {
+            font-family: system-ui, sans-serif;
+            background: #f9f9f9;
+            color: #222;
+            margin: 0;
+            padding: 20px;
+        }
+        header {
+            text-align: center;
+            padding: 20px;
+            background: linear-gradient(to right, #004d40, #00796b); /* FN 테마 색상 예시 */
+            color: white;
+            margin: -20px -20px 30px -20px;
+        }
+        h1 { margin: 0; font-size: 2rem; }
+        #currentDate { font-size: 1.1rem; margin-top: 8px; }
+        #controls {
+            text-align: center;
+            margin: 20px 0 30px;
+            display: flex;
+            flex-wrap: wrap;
+            justify-content: center;
+            gap: 15px;
+            align-items: center;
+        }
+        label { font-weight: bold; }
+        input[type="date"] {
+            padding: 8px 12px;
+            font-size: 1rem;
+            border-radius: 6px;
+            border: 1px solid #aaa;
+        }
+        #imageViewer {
+            position: relative;
+            max-width: 1000px;
+            margin: 0 auto;
+        }
+        .nav-btn {
+            position: absolute;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 60px;
+            height: 60px;
+            background: rgba(0, 0, 0, 0.5);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            font-size: 2rem;
+            cursor: pointer;
+            z-index: 10;
+            opacity: 0.7;
+            transition: opacity 0.2s;
+        }
+        .nav-btn:hover { opacity: 1; background: rgba(0, 0, 0, 0.7); }
+        .nav-btn:disabled { opacity: 0.3; cursor: not-allowed; background: rgba(100,100,100,0.4); }
+        .left  { left: 10px; }
+        .right { right: 10px; }
+        #imageWrapper {
+            text-align: center;
+        }
+        #mainImage {
+            max-width: 100%;
+            height: auto;
+            border-radius: 8px;
+            box-shadow: 0 6px 20px rgba(0,0,0,0.2);
+        }
+        #loading, #error {
+            text-align: center;
+            padding: 60px 20px;
+            font-size: 1.3rem;
+            color: #555;
+        }
+        #error { color: #c62828; }
+        #pageInfo {
+            text-align: center;
+            margin-top: 15px;
+            font-size: 1.2rem;
+            font-weight: bold;
+        }
+        @media (max-width: 768px) {
+            .nav-btn { width: 50px; height: 50px; font-size: 1.6rem; }
+            .left { left: 5px; }
+            .right { right: 5px; }
+        }
+    </style>
+</head>
+<body>
+
+    <header>
+        <h1>파이낸셜뉴스</h1>
+        <div id="currentDate"></div>
+    </header>
+
+    <div id="controls">
+        <label for="dateInput">날짜 선택:</label>
+        <input type="date" id="dateInput">
+    </div>
+
+    <div id="imageViewer">
+        <button id="prevBtn" class="nav-btn left" onclick="changePage(-1)" disabled>◀</button>
+        
+        <div id="imageWrapper">
+            <div id="loading">이미지 로딩 중...</div>
+            <img id="mainImage" style="display:none;" alt="신문 페이지">
+            <div id="error" style="display:none;"></div>
+        </div>
+        
+        <button id="nextBtn" class="nav-btn right" onclick="changePage(1)">▶</button>
+    </div>
+
+    <div id="pageInfo">페이지 1</div>
+
+    <script src="script4.js"></script>
+    <script>
+        let currentPage = 1;
+        let currentDate = '';
+        const source = 'FN';  // 파이낸셜뉴스 고정
+
+        document.addEventListener('DOMContentLoaded', () => {
+            const dateInput = document.getElementById('dateInput');
+            currentDate = getTodayDate();
+            dateInput.value = currentDate;
+            updateDateDisplay(currentDate);
+
+            loadCurrentPage(source, currentDate, null, currentPage);
+
+            dateInput.addEventListener('change', () => {
+                currentDate = dateInput.value;
+                if (currentDate) {
+                    updateDateDisplay(currentDate);
+                    currentPage = 1;
+                    loadCurrentPage(source, currentDate, null, currentPage);
+                    document.getElementById('prevBtn').disabled = true;
+                }
+            });
+        });
+
+        function updateDateDisplay(dateStr) {
+            const display = document.getElementById('currentDate');
+            if (!display || !dateStr) return;
+            const date = new Date(dateStr);
+            display.textContent = date.toLocaleDateString('ko-KR', {
+                year: 'numeric', month: 'long', day: 'numeric', weekday: 'long'
+            });
+        }
+
+        function changePage(delta) {
+            const newPage = currentPage + delta;
+            if (newPage < 1) return;
+            currentPage = newPage;
+            loadCurrentPage(source, currentDate, null, currentPage);
+            document.getElementById('prevBtn').disabled = (currentPage <= 1);
+        }
+    </script>
+</body>
+</html>
