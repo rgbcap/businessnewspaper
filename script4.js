@@ -29,7 +29,7 @@ function generateImageUrl(source, date, type, pagenum) {
         const typeCode = typeMap[type];
         if (!typeCode) throw new Error('MK에서 지원하지 않는 type입니다.');
         const paddedPage = pagenum.toString().padStart(2, '0');
-        return `https://file2.mk.co.kr/mkde/${formattedDate}/page/${typeCode}_${paddedPage}_ORG.jpg`;
+        return `https://file2.mk.co.kr/mkde/${formattedDate}/page/${typeCode}_${paddedPage}_BIG.jpg`;
     } 
     else if (source === 'SE') {
         const section = pagenum * 100;
@@ -84,3 +84,4 @@ function loadCurrentPage(source, date, type, pageNum) {
         }
     }
 }
+
