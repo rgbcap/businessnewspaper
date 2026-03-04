@@ -132,10 +132,12 @@
         let currentPage = 1;
         let currentDate = '';
         let currentType = 'A';
+        const source = 'HK'
 
         document.addEventListener('DOMContentLoaded', () => {
             const dateInput = document.getElementById('dateInput');
-            currentDate = getTodayDate();
+            //source에 따라 다른 기준 시간 적용
+            currentDate = getEffectiveDate(source);    //  <- source 변수 사용
             dateInput.value = currentDate;
             updateDateDisplay(currentDate);
 
@@ -213,4 +215,5 @@
 </body>
 
 </html>
+
 
