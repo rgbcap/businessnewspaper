@@ -110,7 +110,7 @@ function generateImageUrl(source, date, type, pagenum) {
         const formattedDate = `${year}/${month}/${day}`;
         const dateName = `${year}${month}${day}`;
         const fileName = `00001${String(section).padStart(5, '0')}_q10.jpg`;
-        return `https://img.sedaily.com/DigitalPaper/${formattedDate}/02100311.${dateName}${fileName}`;
+        return `https://wimg.sedaily.com/svc/epaper/${formattedDate}/02100311.${dateName}${fileName}`;
     } 
 }
 
@@ -150,6 +150,7 @@ function loadCurrentPage(source, date, type, pageNum) {
         }
     }
 }
+
 
 
 
