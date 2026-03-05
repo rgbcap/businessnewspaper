@@ -19,7 +19,7 @@ function getThresholdForSource(source) {
             break;
         case 'MK':  // 매경 - 예: 17:30
             thresholdHour = 18;
-            thresholdMinute = 00;
+            thresholdMinute = 20;
             break;
         case 'SE':  // 서울경제 - 예: 23:59
             thresholdHour = 18;
@@ -150,6 +150,7 @@ function loadCurrentPage(source, date, type, pageNum) {
         }
     }
 }
+
 
 
 
